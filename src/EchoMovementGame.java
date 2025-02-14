@@ -81,15 +81,6 @@ class Echo extends Collidable
         this.lastPosition = new Point(x, y);
     }
 
-    public Point getNextPosition()
-    {
-        if (currentIndex + 1 < moveHistory.size())
-        {
-            return moveHistory.get(currentIndex + 1);
-        }
-        return null;
-    }
-
     public void update()
     {
         if (delayCounter > 0)
@@ -211,6 +202,7 @@ public class EchoMovementGame extends JPanel implements KeyListener
         platforms.add(new Platform(50, 150, 200, 20, Color.BLACK));
         platforms.add(new Platform(100, 400, 200, 20, Color.BLACK));
         platforms.add(new Platform(900, 400, 200, 20, Color.BLACK));
+        platforms.add(new Platform(50, 120, 20, 200, Color.BLACK));
 
         // Add disappearing platforms
         addDisappearingPlatforms();
@@ -454,7 +446,7 @@ public class EchoMovementGame extends JPanel implements KeyListener
         echoes.forEach(echo -> echo.draw(g));
         buttons.forEach(button -> button.draw(g));
 
-        if (levelComplete) { // Assume you have a flag for level completion
+        if (levelComplete) {
             g.setFont(new Font("Arial", Font.BOLD, 30));
             g.setColor(Color.GREEN);
             g.drawString("Level Complete! Press R to restart", getWidth() / 2 - 100, getHeight() / 2);
