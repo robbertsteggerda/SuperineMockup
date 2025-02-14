@@ -7,8 +7,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 
-//todo: fix jumping sometimes needing multiple space presses, add echo collission
-
 // Abstract base class for all collidable objects
 abstract class Collidable
 {
@@ -59,12 +57,11 @@ class Platform extends Collidable
     }
 
     @Override
-    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight)
-    {
-        return objX + 5 < x + width &&  // Added small offset to prevent edge cases
-                objX + objWidth - 5 > x &&
-                objY + objHeight >= y + 1 && // Added tolerance for landing
-                objY + objHeight <= y + 10;
+    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight) {
+        return objX + 5 < x + width && // Left edge of player is to the left of the platform's right edge
+                objX + objWidth - 5 > x && // Right edge of player is to the right of the platform's left edge
+                objY + objHeight >= y && // Player's bottom edge is at or below the platform's top edge
+                objY + objHeight <= y + 5; // Player's bottom edge is within 5 pixels of the platform's top edge
     }
 }
 
@@ -191,6 +188,7 @@ public class EchoMovementGame extends JPanel implements KeyListener
     private ArrayList<Platform> disappearingPlatforms = new ArrayList<>();
     private Queue<Point> movementHistory = new LinkedList<>();
     private ArrayList<Button> buttons = new ArrayList<>();
+    private boolean levelComplete = false;
 
     public EchoMovementGame()
     {
@@ -207,7 +205,7 @@ public class EchoMovementGame extends JPanel implements KeyListener
         timer.start();
     }
 
-    private void initializeLevel()
+    private void initializeLevel() //todo add int level parameter to this so we can have different levels. Also clearLevel() that removes all this stuff so we can switch between levels. just call clearLevel() at the start of this method
     {
         // Add regular platforms
         platforms.add(new Platform(50, 150, 200, 20, Color.BLACK));
@@ -219,13 +217,18 @@ public class EchoMovementGame extends JPanel implements KeyListener
 
         // Add buttons with different actions
         buttons.add(new Button(1050, 350, 40, 40, Color.GREEN, this::clearDisappearingPlatforms));
-        // Example of adding another button with a different action
-        buttons.add(new Button(800, 350, 40, 40, Color.BLUE, () -> System.out.println("Blue button pressed!")));
+        buttons.add(new Button(110, 360,40,40,Color.CYAN,this::completeLevel));
+    }
+
+    private void completeLevel()
+    {
+        levelComplete = true;
     }
 
     private void addDisappearingPlatforms()
     {
         disappearingPlatforms.add(new Platform(300, 400, 600, 20, Color.RED));
+        disappearingPlatforms.add(new Platform(160, 170, 20, 230, Color.RED));
     }
 
     private void clearDisappearingPlatforms()
@@ -248,32 +251,110 @@ public class EchoMovementGame extends JPanel implements KeyListener
         if (playerY > 600) restart();
     }
 
-    private void updatePlayerVelocity()
-    {
-        // Apply gravity if in the air
-        if (!onGround)
-        {
-            velocityY += 1; // Gravity
-        } else if (jumping)
-        { // Apply initial jump force only ONCE
-            velocityY = JUMP_FORCE;
-            jumping = false; // Prevent repeated jumping while still in the air
-            onGround = false; // Immediately set onGround to false after jump
-        }
+    private void updatePlayerVelocity() {
+    // Apply gravity if in the air
+    if (!onGround) {
+        velocityY += 1; // Gravity
+    }
 
-        // Handle horizontal movement
-        if (aPressed && !dPressed)
-        {
-            velocityX = -10;
-        } else if (dPressed && !aPressed)
-        {
-            velocityX = 10;
-        } else
-        {
-            velocityX = 0;
+    // Apply jump force if jumping
+    if (jumping) {
+        velocityY = JUMP_FORCE; // Apply initial jump force
+        onGround = false; // Player is no longer on the ground
+        jumping = false; // Reset jumping flag after applying jump force
+    }
+
+    // Handle horizontal movement
+    if (aPressed && !dPressed) {
+        velocityX = -10;
+    } else if (dPressed && !aPressed) {
+        velocityX = 10;
+    } else {
+        velocityX = 0;
+    }
+}
+
+    private void handleVerticalMovement(int currentX, int initialY, int targetY) {
+        int steps = Math.abs(velocityY) + 1;
+        boolean landed = false;
+
+        for (int i = 1; i <= steps; i++) {
+            float progress = (float) i / steps;
+            int testY = initialY + (int) ((targetY - initialY) * progress);
+
+            // Build a unified list of collidables (platforms, disappearingPlatforms, and echoes)
+            ArrayList<Collidable> collidables = new ArrayList<>();
+            collidables.addAll(platforms);
+            collidables.addAll(disappearingPlatforms);
+            collidables.addAll(echoes);
+
+            for (Collidable collidable : collidables) {
+                // Only check top collision when falling
+                if (velocityY >= 0 && collidable.isCollidingWithTop(currentX, testY, PLAYER_WIDTH, PLAYER_HEIGHT)) {
+                    playerY = collidable.y - PLAYER_HEIGHT; // Snap the player to the top
+                    velocityY = 0;
+                    onGround = true;
+                    landed = true;
+                    canJump = true;
+                    // If colliding with an echo, you might want to stick to it:
+                    if (collidable instanceof Echo) {
+                        currentPlatform = (Echo) collidable;
+                    }
+                    break;
+                }
+                // Check for ceiling collisions when jumping upward
+                if (velocityY < 0 && collidable.isCollidingWithSide(currentX, testY, PLAYER_WIDTH, PLAYER_HEIGHT)) {
+                    playerY = collidable.y + collidable.height;
+                    velocityY = 0;
+                    break;
+                }
+            }
+
+            if (!landed) {
+                playerY = testY;
+                onGround = false;
+            } else {
+                break;
+            }
         }
     }
 
+    private void handleHorizontalMovement(int initialX, int initialY, int targetX) {
+        int steps = Math.abs(velocityX) + 1;
+        for (int i = 1; i <= steps; i++) {
+            float progress = (float) i / steps;
+            int testX = initialX + (int) ((targetX - initialX) * progress);
+
+            boolean collision = false;
+            // Build the unified list of collidables
+            ArrayList<Collidable> collidables = new ArrayList<>();
+            collidables.addAll(platforms);
+            collidables.addAll(disappearingPlatforms);
+            collidables.addAll(echoes);
+
+            for (Collidable collidable : collidables) {
+                // Skip side collision if it's a top landing
+                if (collidable.isCollidingWithTop(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT)) {
+                    continue;
+                }
+                if (collidable.isCollidingWithSide(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT)) {
+                    collision = true;
+                    if (velocityX > 0) {
+                        playerX = collidable.x - PLAYER_WIDTH;
+                    } else if (velocityX < 0) {
+                        playerX = collidable.x + collidable.width;
+                    }
+                    velocityX = 0;
+                    break;
+                }
+            }
+            if (!collision) {
+                playerX = testX;
+            } else {
+                break;
+            }
+        }
+    }
 
     private void handleMovement() {
         int initialX = playerX;
@@ -297,75 +378,6 @@ public class EchoMovementGame extends JPanel implements KeyListener
 
         handleHorizontalMovement(initialX, initialY, targetX);
         handleVerticalMovement(playerX, initialY, targetY);
-    }
-
-    private void handleHorizontalMovement(int initialX, int initialY, int targetX) {
-        int steps = Math.abs(velocityX) + 1;
-        for (int i = 1; i <= steps; i++) {
-            float progress = (float) i / steps;
-            int testX = initialX + (int) ((targetX - initialX) * progress);
-
-            boolean collision = false;
-            ArrayList<Platform> allPlatforms = new ArrayList<>(platforms);
-            allPlatforms.addAll(disappearingPlatforms);
-
-            for (Platform platform : allPlatforms) {
-                if (platform.isCollidingWithSide(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT)) {
-                    collision = true;
-                    if (velocityX > 0) {
-                        playerX = platform.x - PLAYER_WIDTH;
-                    } else if (velocityX < 0) {
-                        playerX = platform.x + platform.width;
-                    }
-                    velocityX = 0; // Stop horizontal movement on collision
-                    break;
-                }
-            }
-
-            if (!collision) {
-                playerX = testX;
-            } else {
-                break;
-            }
-        }
-    }
-
-    private void handleVerticalMovement(int currentX, int initialY, int targetY) {
-        int steps = Math.abs(velocityY) + 1;
-        boolean landed = false;
-
-        for (int i = 1; i <= steps; i++) {
-            float progress = (float) i / steps;
-            int testY = initialY + (int) ((targetY - initialY) * progress);
-
-            ArrayList<Platform> allPlatforms = new ArrayList<>(platforms);
-            allPlatforms.addAll(disappearingPlatforms);
-
-
-            for (Platform platform : allPlatforms) {
-                if (platform.isCollidingWithTop(currentX, testY, PLAYER_WIDTH, PLAYER_HEIGHT)) {
-                    playerY = platform.y - PLAYER_HEIGHT;
-                    velocityY = 0;
-                    onGround = true;
-                    landed = true;
-                    canJump = true; // Enable jumping again immediately after landing
-                    break;
-                }
-
-                if (velocityY < 0 && platform.isCollidingWithSide(currentX, testY, PLAYER_WIDTH, PLAYER_HEIGHT)) {
-                    playerY = platform.y + platform.height;
-                    velocityY = 0; // Stop vertical movement on ceiling collision
-                    break;
-                }
-            }
-
-            if (!landed) {
-                playerY = testY;
-                onGround = false;
-            } else {
-                break;
-            }
-        }
     }
 
     private void checkButtonCollisions(int currentX, int currentY)
@@ -413,6 +425,9 @@ public class EchoMovementGame extends JPanel implements KeyListener
         velocityY = 0;
         currentPlatform = null;
         addDisappearingPlatforms();
+        levelComplete = false;
+        echoes.clear();
+        movementHistory.clear();
     }
 
     @Override
@@ -426,23 +441,35 @@ public class EchoMovementGame extends JPanel implements KeyListener
         g.setColor(Color.RED);
         g.fillRect(playerX, playerY, PLAYER_WIDTH, PLAYER_HEIGHT);
 
+        g.drawString("onground: " + onGround, 20, 20);
+        g.drawString("canJump: " + canJump, 20, 40);
+        g.drawString("jumping: " + jumping, 20, 60);
+        g.drawString("y velocity: " + velocityY, 20, 80);
+        g.drawString("player x: " + playerX, 20, 100);
+        g.drawString("player y: " + playerY, 20, 120);
+
         // Draw all game objects
         platforms.forEach(platform -> platform.draw(g));
         disappearingPlatforms.forEach(platform -> platform.draw(g));
         echoes.forEach(echo -> echo.draw(g));
         buttons.forEach(button -> button.draw(g));
+
+        if (levelComplete) { // Assume you have a flag for level completion
+            g.setFont(new Font("Arial", Font.BOLD, 30));
+            g.setColor(Color.GREEN);
+            g.drawString("Level Complete! Press R to restart", getWidth() / 2 - 100, getHeight() / 2);
+        }
     }
 
     @Override
-    public void keyPressed(KeyEvent e)
-    {
-        switch (e.getKeyCode())
-        {
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
             case KeyEvent.VK_SPACE:
-                if (onGround && canJump)
-                {
-                    velocityY = -15;
+                if (onGround && canJump) {
+                    velocityY = JUMP_FORCE; // Apply jump force
                     jumping = true;
+                    canJump = false; // Prevent double jumping
+                    currentPlatform = null;
                 }
                 break;
             case KeyEvent.VK_E:
