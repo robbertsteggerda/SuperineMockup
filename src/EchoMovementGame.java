@@ -649,6 +649,30 @@ public class EchoMovementGame extends JPanel implements KeyListener
         g.drawString("player y: " + playerY, 20, 120);
         g.drawString("layer: "+ layer, 20, 140);
         g.drawString("level: " + level, 20, 160);
+
+        drawControlsOverlay(g); // Call the new method to draw controls
+    }
+
+    private void drawControlsOverlay(Graphics g) {
+        g.setColor(Color.BLACK); // Or any color that stands out against your background
+        g.setFont(new Font("Arial", Font.PLAIN, 20)); // Choose a suitable font and size
+        int x = getWidth() - 800; // X position from the right edge
+        int y = 20; // Starting Y position
+        int lineHeight = 22; // Spacing between lines
+
+        g.drawString("Controls:", x, y);
+        y += lineHeight;
+        g.drawString("A + D: Move", x, y);
+        y += lineHeight;
+        g.drawString("Space: Jump", x, y);
+        y += lineHeight;
+        g.drawString("E: Spawn Echo that repeats your last three seconds of movement. Ride it!", x, y);
+        y += lineHeight;
+        g.drawString("R: Restart", x, y);
+        y += lineHeight;
+        g.drawString("number keys: Pick Level", x, y);
+        y += lineHeight;
+        g.drawString("Arrow up/down: change layer (try it in level 2!)", x, y);
     }
 
     @Override
@@ -681,10 +705,10 @@ public class EchoMovementGame extends JPanel implements KeyListener
                 restart();
                 break;
             case KeyEvent.VK_UP:
-                layer++;
+                if (level == 2) layer = layer == 0 ? 1 : 0; //the reason I have this duplicate bit is so I can easily add more layers (for example 0, 1, 2 -> rolls back over to 0). Also nice not at all confusing ternary, will be replaced with a simple if statement if more layers are added
                 break;
             case KeyEvent.VK_DOWN:
-                layer--;
+                if (level == 2) layer = layer == 0 ? 1 : 0;
                 break;
             case KeyEvent.VK_1:
                 level = 1;
