@@ -375,6 +375,8 @@ public class EchoMovementGame extends JPanel implements KeyListener
                 platforms.add(new Platform(50, 400, 200, 20, Color.BLACK, 0));
                 mountains.add(new Mountain(400, 300, 100, 122, Color.GREEN, 1)); // Layer 1, opaque
                 mountains.add(new Mountain(600, 300, 100, 122, Color.GREEN, 0)); // Layer 0, default opacity
+                platforms.add(new Platform(880, 400, 200, 20, Color.BLACK, 0));
+                buttons.add(new Button(1060, 350, 40, 40, Color.CYAN, this::completeLevel,0));
                 break;
         }
 
@@ -633,13 +635,6 @@ public class EchoMovementGame extends JPanel implements KeyListener
         buttons.forEach(button -> button.draw(g, layer));
         mountains.forEach(mountain -> mountain.draw(g, layer));
 
-        if (levelComplete)
-        {
-            g.setFont(new Font("Arial", Font.BOLD, 30));
-            g.setColor(Color.GREEN);
-            g.drawString("Level Complete! Press R to restart", getWidth() / 2 - 100, getHeight() / 2);
-        }
-
         g.setColor(Color.red);
         g.drawString("onground: " + onGround, 20, 20);
         g.drawString("canJump: " + canJump, 20, 40);
@@ -651,6 +646,13 @@ public class EchoMovementGame extends JPanel implements KeyListener
         g.drawString("level: " + level, 20, 160);
 
         drawControlsOverlay(g); // Call the new method to draw controls
+
+        if (levelComplete)
+        {
+            g.setFont(new Font("Arial", Font.BOLD, 30));
+            g.setColor(Color.GREEN);
+            g.drawString("Level Complete! Press R to restart", getWidth() / 2 - 100, getHeight() / 2);
+        }
     }
 
     private void drawControlsOverlay(Graphics g) {
