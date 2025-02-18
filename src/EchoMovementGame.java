@@ -318,6 +318,7 @@ public class EchoMovementGame extends JPanel implements KeyListener
     private final int MOVEMENT_HISTORY_LENGTH = 180;
     private final int ECHO_START_DELAY = 0;
     private boolean canJump = true; // New flag to control jump availability
+    private boolean timeFrozen = false;
 
     private ArrayList<Echo> echoes = new ArrayList<>();
     private ArrayList<Platform> platforms = new ArrayList<>();
@@ -404,7 +405,9 @@ public class EchoMovementGame extends JPanel implements KeyListener
         recordPosition();
         updatePlayerVelocity();
         handleMovement();
-        updateEchoes();
+        if (!timeFrozen) {
+            updateEchoes();
+        }
         repaint();
     }
 
@@ -548,7 +551,7 @@ public class EchoMovementGame extends JPanel implements KeyListener
         int initialX = playerX;
         int initialY = playerY;
 
-        if (currentPlatform != null && currentPlatform.isActive())
+        if (currentPlatform != null && currentPlatform.isActive() && !timeFrozen)
         {
             Point currentPos = currentPlatform.getCurrentPosition();
             Point lastPos = currentPlatform.getLastPosition();
@@ -675,6 +678,8 @@ public class EchoMovementGame extends JPanel implements KeyListener
         g.drawString("number keys: Pick Level", x, y);
         y += lineHeight;
         g.drawString("Arrow up/down: change layer (try it in level 2!)", x, y);
+        y += lineHeight;
+        g.drawString("T: Toggle Time Freeze", x, y);
     }
 
     @Override
@@ -712,6 +717,11 @@ public class EchoMovementGame extends JPanel implements KeyListener
             case KeyEvent.VK_DOWN:
                 if (level == 2) layer = layer == 0 ? 1 : 0;
                 break;
+            case KeyEvent.VK_T:
+            {
+                timeFrozen = !timeFrozen;
+                break;
+            }
             case KeyEvent.VK_1:
                 level = 1;
                 restart();
