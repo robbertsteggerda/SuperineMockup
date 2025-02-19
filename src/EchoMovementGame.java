@@ -257,6 +257,113 @@ class Button extends Collidable {
     }
 }
 
+class QuantumEntangledPlatform extends Collidable {
+    private Color color;
+    private QuantumEntangledPlatform linkedPlatform;
+    private int originalX, originalY;
+    private int velocityY = 0;
+    private boolean onGround = false;
+
+    public QuantumEntangledPlatform(int x, int y, int width, int height, Color color) {
+        super(x, y, width, height);
+        this.color = color;
+        this.originalX = x;
+        this.originalY = y;
+    }
+
+    public void linkWith(QuantumEntangledPlatform other) {
+        this.linkedPlatform = other;
+        other.linkedPlatform = this;
+    }
+
+    public void moveHorizontally(int dx) {
+        this.x += dx;
+        // When pushed, we should check if we're still on ground
+        checkIfStillOnGround = true;
+        if (linkedPlatform != null) {
+            linkedPlatform.x += dx;
+            linkedPlatform.checkIfStillOnGround = true;
+        }
+    }
+
+    private boolean checkIfStillOnGround = false;
+
+    public void update(ArrayList<Collidable> collidables, boolean timeFrozen) {
+        // Check if we're still on ground after being pushed
+        if (checkIfStillOnGround) {
+            boolean stillOnGround = false;
+            for (Collidable collidable : collidables) {
+                if (collidable == this || collidable == linkedPlatform) continue;
+                if (isLandingOn(collidable)) {
+                    stillOnGround = true;
+                    break;
+                }
+            }
+            if (!stillOnGround) {
+                onGround = false;
+            }
+            checkIfStillOnGround = false;
+        }
+
+        // Apply gravity if not on ground
+        if (!onGround && !timeFrozen) {
+            velocityY += 1; // Gravity
+            int newY = y + velocityY;
+            boolean landed = false;
+
+            for (Collidable collidable : collidables) {
+                if (collidable == this || collidable == linkedPlatform) continue;
+
+                // Check if platform lands on something
+                if (velocityY >= 0 && isLandingOn(collidable)) {
+                    newY = collidable.y - height;
+                    velocityY = 0;
+                    onGround = true;
+                    landed = true;
+                    break;
+                }
+            }
+
+            if (!landed) {
+                onGround = false;
+            }
+
+            y = newY;
+
+            // Reset if fallen off screen
+            if (y > 600) {
+                reset();
+                linkedPlatform.reset();
+            }
+        }
+    }
+
+    private boolean isLandingOn(Collidable other) {
+        return x < other.x + other.width &&
+                x + width > other.x &&
+                y + height >= other.y &&
+                y + height <= other.y + 10;
+    }
+
+    public void reset() {
+        this.x = originalX;
+        this.y = originalY;
+        this.velocityY = 0;
+        this.onGround = false;
+    }
+
+    @Override
+    public void draw(Graphics g, int playerLayer) {
+        if (this.layer != playerLayer) {
+            Color opaqueColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 50);
+            g.setColor(opaqueColor);
+        } else {
+            g.setColor(color);
+        }
+        g.fillRect(x, y, width, height);
+    }
+}
+
 public class EchoMovementGame extends JPanel implements KeyListener {
     private int playerX = 100, playerY = 100;
     private int velocityY = 0, velocityX = 0;
@@ -273,6 +380,9 @@ public class EchoMovementGame extends JPanel implements KeyListener {
     private final int ECHO_START_DELAY = 0;
     private boolean canJump = true; // New flag to control jump availability
     private boolean timeFrozen = false;
+
+    private ArrayList<QuantumEntangledPlatform> quantumPlatforms = new ArrayList<>();
+    private static final int QUANTUM_PLATFORM_PUSH_SPEED = 5;
 
     private ArrayList<Echo> echoes = new ArrayList<>();
     private ArrayList<Platform> platforms = new ArrayList<>();
@@ -303,6 +413,7 @@ public class EchoMovementGame extends JPanel implements KeyListener {
         platforms.clear();
         echoes.clear();
         buttons.clear();
+        quantumPlatforms.clear();
     }
 
     private void initializeLevel(int level) {
@@ -310,6 +421,7 @@ public class EchoMovementGame extends JPanel implements KeyListener {
         switch (level) {
             case 1:
                 // Add regular platforms
+                layer = 0;
                 platforms.add(new Platform(50, 150, 200, 20, Color.BLACK));
                 platforms.add(new Platform(100, 400, 200, 20, Color.BLACK));
                 platforms.add(new Platform(900, 400, 200, 20, Color.BLACK));
@@ -323,17 +435,23 @@ public class EchoMovementGame extends JPanel implements KeyListener {
                 buttons.add(new Button(110, 360, 40, 40, Color.CYAN, this::completeLevel));
                 break;
             case 2:
+                layer = 0;
                 platforms.add(new Platform(50, 400, 200, 20, Color.BLACK, 0));
                 mountains.add(new Mountain(400, 300, 100, 122, Color.GREEN, 1)); // Layer 1, opaque
                 mountains.add(new Mountain(600, 300, 100, 122, Color.GREEN, 0)); // Layer 0, default opacity
                 platforms.add(new Platform(880, 400, 200, 20, Color.BLACK, 0));
-                buttons.add(new Button(1060, 350, 40, 40, Color.CYAN, this::completeLevel,0));
+                buttons.add(new Button(1060, 350, 40, 40, Color.CYAN, this::completeLevel, 0));
                 break;
             case 3:
+                layer = 0;
                 // Starting platform (layer 0)
                 platforms.add(new Platform(50, 200, 200, 20, Color.BLACK, 0));
                 platforms.add(new Platform(50, 400, 200, 20, Color.BLACK, 0));
                 platforms.add(new Platform(50, 150, 20, 200, Color.BLACK));
+
+                platforms.add(new Platform(50, 200, 200, 20, Color.BLACK, 1));
+                platforms.add(new Platform(50, 400, 200, 20, Color.BLACK, 1));
+                platforms.add(new Platform(50, 150, 20, 200, Color.BLACK,1));
 
                 // Gap followed by disappearing platform (layer 1)
                 disappearingPlatforms.add(new Platform(350, 400, 200, 20, Color.RED, 1));
@@ -347,14 +465,33 @@ public class EchoMovementGame extends JPanel implements KeyListener {
                 // Button to clear disappearing platforms (layer 0)
                 buttons.add(new Button(900, 360, 40, 40, Color.GREEN, this::clearDisappearingPlatforms, 0));
 
-                // Left side wall (layer 0)
+                // Left side wall (layer 0 + 1)
                 disappearingPlatforms.add(new Platform(160, 200, 20, 220, Color.RED, 0));
+                disappearingPlatforms.add(new Platform(160, 200, 20, 220, Color.RED, 1));
 
                 // Level completion button behind left wall (layer 0)
                 buttons.add(new Button(110, 360, 40, 40, Color.CYAN, this::completeLevel, 0));
                 break;
-        }
 
+            case 4:
+                layer = 0;
+                // Starting platform
+                platforms.add(new Platform(50, 400, 400, 20, Color.BLACK, 0));
+                //gap so that we can't just push the block across and make the jump
+                platforms.add(new Platform(550, 400, 400, 20, Color.BLACK, 0));
+
+                // High platform with button
+                platforms.add(new Platform(900, 250, 200, 20, Color.BLACK, 0));
+                buttons.add(new Button(1000, 210, 40, 40, Color.CYAN, this::completeLevel, 0));
+
+                // Create quantum entangled platforms
+                QuantumEntangledPlatform p1 = new QuantumEntangledPlatform(950, 0, 50, 50, Color.MAGENTA);
+                QuantumEntangledPlatform p2 = new QuantumEntangledPlatform(300, 0, 50, 50, Color.MAGENTA);
+                p1.linkWith(p2);
+                quantumPlatforms.add(p1);
+                quantumPlatforms.add(p2);
+                break;
+        }
     }
 
     private void completeLevel() {
@@ -377,6 +514,11 @@ public class EchoMovementGame extends JPanel implements KeyListener {
         handleMovement();
         if (!timeFrozen) {
             updateEchoes();
+        }
+        if (level == 4) {
+            for (QuantumEntangledPlatform platform : quantumPlatforms) {
+                platform.update(new ArrayList<>(platforms), timeFrozen);
+            }
         }
         repaint();
     }
@@ -422,6 +564,7 @@ public class EchoMovementGame extends JPanel implements KeyListener {
             collidables.addAll(disappearingPlatforms);
             collidables.addAll(echoes);
             collidables.addAll(mountains);
+            collidables.addAll(quantumPlatforms);
 
             for (Collidable collidable : collidables) {
                 // Only check top collision when falling
@@ -472,6 +615,15 @@ public class EchoMovementGame extends JPanel implements KeyListener {
                 // Skip side collision if it's a top landing
                 if (collidable.isCollidingWithTop(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT, layer)) {
                     continue;
+                }
+                if (level == 4) {
+                    for (QuantumEntangledPlatform platform : quantumPlatforms) {
+                        if (platform.isCollidingWithSide(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT, layer)) {
+                            platform.moveHorizontally(velocityX);
+                            collision = true;
+                            break;
+                        }
+                    }
                 }
                 if (collidable.isCollidingWithSide(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT, layer)) {
                     collision = true;
@@ -552,6 +704,10 @@ public class EchoMovementGame extends JPanel implements KeyListener {
         currentPlatform = null;
         levelComplete = false;
         timeFrozen = false;
+        currentPlatform = null;
+        for (QuantumEntangledPlatform platform : quantumPlatforms) {
+            platform.reset();
+        }
         initializeLevel(level);
     }
 
@@ -571,6 +727,7 @@ public class EchoMovementGame extends JPanel implements KeyListener {
         echoes.forEach(echo -> echo.draw(g, layer));
         buttons.forEach(button -> button.draw(g, layer));
         mountains.forEach(mountain -> mountain.draw(g, layer));
+        quantumPlatforms.forEach(platform -> platform.draw(g, layer));
 
         g.setColor(Color.red);
         g.drawString("onground: " + onGround, 20, 20);
@@ -627,9 +784,10 @@ public class EchoMovementGame extends JPanel implements KeyListener {
                 }
                 break;
             case KeyEvent.VK_E:
+                if (level == 4) return;
                 ArrayList<Point> historyClone = new ArrayList<>(movementHistory);
                 Echo newEcho = new Echo(playerX, playerY, ECHO_WIDTH, ECHO_HEIGHT,
-                        historyClone, ECHO_START_DELAY);
+                        historyClone, ECHO_START_DELAY, layer);
                 echoes.add(newEcho);
                 break;
             case KeyEvent.VK_D:
@@ -663,6 +821,11 @@ public class EchoMovementGame extends JPanel implements KeyListener {
             case KeyEvent.VK_3:
                 level = 3;
                 restart();
+                break;
+            case KeyEvent.VK_4:
+                level = 4;
+                restart();
+                break;
         }
     }
 
