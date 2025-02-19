@@ -8,17 +8,14 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 // Abstract base class for all collidable objects
-abstract class Collidable
-{
+abstract class Collidable {
     protected int x, y, width, height, layer;
 
-    public Collidable(int x, int y, int width, int height)
-    {
+    public Collidable(int x, int y, int width, int height) {
         this(x, y, width, height, 0); // Default layer 0
     }
 
-    public Collidable(int x, int y, int width, int height, int layer)
-    {
+    public Collidable(int x, int y, int width, int height, int layer) {
         this.x = x;
         this.y = y;
         this.width = width;
@@ -26,8 +23,7 @@ abstract class Collidable
         this.layer = layer;
     }
 
-    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         if (this.layer != playerLayer) return false;
 
         return objX < x + width &&
@@ -36,8 +32,7 @@ abstract class Collidable
                 objY + objHeight <= y + 10;
     }
 
-    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         if (this.layer != playerLayer) return false;
 
         return objX + objWidth > x &&
@@ -49,17 +44,14 @@ abstract class Collidable
     public abstract void draw(Graphics g, int playerLayer); // Modified draw method
 }
 
-class Platform extends Collidable
-{
+class Platform extends Collidable {
     private Color color;
 
-    public Platform(int x, int y, int width, int height, Color color)
-    {
+    public Platform(int x, int y, int width, int height, Color color) {
         this(x, y, width, height, color, 0);
     }
 
-    public Platform(int x, int y, int width, int height, Color color, int layer)
-    {
+    public Platform(int x, int y, int width, int height, Color color, int layer) {
         super(x, y, width, height, layer);
         this.color = color;
     }
@@ -67,20 +59,17 @@ class Platform extends Collidable
     @Override
     public void draw(Graphics g, int playerLayer) // Implementation of modified draw
     {
-        if (this.layer != playerLayer)
-        {
+        if (this.layer != playerLayer) {
             Color opaqueColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 50);
             g.setColor(opaqueColor);
-        } else
-        {
+        } else {
             g.setColor(color); // Default color for same layer
         }
         g.fillRect(x, y, width, height);
     }
 
     @Override
-    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         return super.isCollidingWithTop(objX, objY, objWidth, objHeight, playerLayer) &&
                 objX + 5 < x + width && // Left edge of player is to the left of the platform's right edge
                 objX + objWidth - 5 > x && // Right edge of player is to the right of the platform's left edge
@@ -89,23 +78,19 @@ class Platform extends Collidable
     }
 
     @Override
-    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         return super.isCollidingWithSide(objX, objY, objWidth, objHeight, playerLayer);
     }
 }
 
-class Mountain extends Collidable
-{
+class Mountain extends Collidable {
     private Color color;
 
-    public Mountain(int x, int y, int width, int height, Color color)
-    {
+    public Mountain(int x, int y, int width, int height, Color color) {
         this(x, y, width, height, color, 0);
     }
 
-    public Mountain(int x, int y, int width, int height, Color color, int layer)
-    {
+    public Mountain(int x, int y, int width, int height, Color color, int layer) {
         super(x, y, width, height, layer);
         this.color = color;
     }
@@ -113,12 +98,10 @@ class Mountain extends Collidable
     @Override
     public void draw(Graphics g, int playerLayer) // Implementation of modified draw
     {
-        if (this.layer != playerLayer)
-        {
+        if (this.layer != playerLayer) {
             Color opaqueColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 50);
             g.setColor(opaqueColor);
-        } else
-        {
+        } else {
             g.setColor(color); // Default color for same layer
         }
         g.fillRect(x, y, width, height / 2); // Draw upper rectangle
@@ -126,19 +109,16 @@ class Mountain extends Collidable
     }
 
     @Override
-    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         if (!super.isCollidingWithTop(objX, objY, objWidth, objHeight, playerLayer)) return false;
 
         // Ensure collision is only checked if object is within the mountain's X bounds
-        if (objX + objWidth < x || objX > x + width)
-        {
+        if (objX + objWidth < x || objX > x + width) {
             return false;
         }
 
         // Collision with flat part
-        if (objY + objHeight >= y && objY + objHeight <= y + 5)
-        {
+        if (objY + objHeight >= y && objY + objHeight <= y + 5) {
             return true;
         }
 
@@ -155,122 +135,101 @@ class Mountain extends Collidable
     }
 
     @Override
-    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         return super.isCollidingWithSide(objX, objY, objWidth, objHeight, playerLayer);
     }
 }
 
 
-class Echo extends Collidable
-{
+class Echo extends Collidable {
     private ArrayList<Point> moveHistory;
     private int currentIndex = 0;
     private int delayCounter;
     private boolean done = false;
     private Point lastPosition;
 
-    public Echo(int x, int y, int width, int height, ArrayList<Point> history, int startDelay)
-    {
+    public Echo(int x, int y, int width, int height, ArrayList<Point> history, int startDelay) {
         this(x, y, width, height, history, startDelay, 0);
     }
 
-    public Echo(int x, int y, int width, int height, ArrayList<Point> history, int startDelay, int layer)
-    {
+    public Echo(int x, int y, int width, int height, ArrayList<Point> history, int startDelay, int layer) {
         super(x, y, width, height, layer);
         this.moveHistory = history;
         this.delayCounter = startDelay;
         this.lastPosition = new Point(x, y);
     }
 
-    public void update()
-    {
-        if (delayCounter > 0)
-        {
+    public void update() {
+        if (delayCounter > 0) {
             delayCounter--;
             return;
         }
 
-        if (currentIndex < moveHistory.size())
-        {
+        if (currentIndex < moveHistory.size()) {
             lastPosition = new Point(x, y);
             Point nextPos = moveHistory.get(currentIndex);
             x = nextPos.x;
             y = nextPos.y;
             currentIndex++;
-        } else
-        {
+        } else {
             done = true;
         }
     }
 
-    public Point getLastPosition()
-    {
+    public Point getLastPosition() {
         return lastPosition;
     }
 
     @Override
     public void draw(Graphics g, int playerLayer) // Implementation of modified draw
     {
-        if (this.layer != playerLayer)
-        {
+        if (this.layer != playerLayer) {
             g.setColor(new Color(100, 100, 100, 50)); // Opaque grey for echo when different layer
-        } else
-        {
+        } else {
             g.setColor(new Color(100, 100, 100)); // Default grey for same layer
         }
         g.fillRect(x, y, width, height);
     }
 
-    public boolean isDone()
-    {
+    public boolean isDone() {
         return done;
     }
 
-    public boolean isActive()
-    {
+    public boolean isActive() {
         return delayCounter <= 0;
     }
 
-    public Point getCurrentPosition()
-    {
+    public Point getCurrentPosition() {
         return new Point(x, y);
     }
 
     @Override
-    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         return super.isCollidingWithTop(objX, objY, objWidth, objHeight, playerLayer);
     }
 
     @Override
-    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         return super.isCollidingWithSide(objX, objY, objWidth, objHeight, playerLayer);
     }
 }
 
-class Button extends Collidable
-{
+class Button extends Collidable {
     private Runnable action;
     private Color color;
 
-    public Button(int x, int y, int width, int height, Color color, Runnable action)
-    {
+    public Button(int x, int y, int width, int height, Color color, Runnable action) {
         this(x, y, width, height, color, action, 0);
     }
 
-    public Button(int x, int y, int width, int height, Color color, Runnable action, int layer)
-    {
+    public Button(int x, int y, int width, int height, Color color, Runnable action, int layer) {
         super(x, y, width, height, layer);
         this.color = color;
         this.action = action;
     }
 
-    public void trigger()
-    {
-        if (action != null)
-        {
+    public void trigger() {
+        if (action != null) {
             action.run();
         }
     }
@@ -278,32 +237,27 @@ class Button extends Collidable
     @Override
     public void draw(Graphics g, int playerLayer) // Implementation of modified draw
     {
-        if (this.layer != playerLayer)
-        {
+        if (this.layer != playerLayer) {
             Color opaqueColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 50);
             g.setColor(opaqueColor);
-        } else
-        {
+        } else {
             g.setColor(color); // Default color for same layer
         }
         g.fillRect(x, y, width, height);
     }
 
     @Override
-    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithSide(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         return super.isCollidingWithSide(objX, objY, objWidth, objHeight, playerLayer);
     }
 
     @Override
-    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer)
-    {
+    public boolean isCollidingWithTop(int objX, int objY, int objWidth, int objHeight, int playerLayer) {
         return super.isCollidingWithTop(objX, objY, objWidth, objHeight, playerLayer);
     }
 }
 
-public class EchoMovementGame extends JPanel implements KeyListener
-{
+public class EchoMovementGame extends JPanel implements KeyListener {
     private int playerX = 100, playerY = 100;
     private int velocityY = 0, velocityX = 0;
     private boolean aPressed = false, dPressed = false;
@@ -328,8 +282,7 @@ public class EchoMovementGame extends JPanel implements KeyListener
     private ArrayList<Button> buttons = new ArrayList<>();
     private boolean levelComplete = false;
 
-    public EchoMovementGame()
-    {
+    public EchoMovementGame() {
         JFrame frame = new JFrame("Echo Jump");
         frame.setSize(1500, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -343,8 +296,7 @@ public class EchoMovementGame extends JPanel implements KeyListener
         timer.start();
     }
 
-    private void clearLevel()
-    {
+    private void clearLevel() {
         movementHistory.clear();
         mountains.clear();
         disappearingPlatforms.clear();
@@ -353,11 +305,9 @@ public class EchoMovementGame extends JPanel implements KeyListener
         buttons.clear();
     }
 
-    private void initializeLevel(int level)
-    {
+    private void initializeLevel(int level) {
         clearLevel();
-        switch (level)
-        {
+        switch (level) {
             case 1:
                 // Add regular platforms
                 platforms.add(new Platform(50, 150, 200, 20, Color.BLACK));
@@ -379,28 +329,48 @@ public class EchoMovementGame extends JPanel implements KeyListener
                 platforms.add(new Platform(880, 400, 200, 20, Color.BLACK, 0));
                 buttons.add(new Button(1060, 350, 40, 40, Color.CYAN, this::completeLevel,0));
                 break;
+            case 3:
+                // Starting platform (layer 0)
+                platforms.add(new Platform(50, 200, 200, 20, Color.BLACK, 0));
+                platforms.add(new Platform(50, 400, 200, 20, Color.BLACK, 0));
+                platforms.add(new Platform(50, 150, 20, 200, Color.BLACK));
+
+                // Gap followed by disappearing platform (layer 1)
+                disappearingPlatforms.add(new Platform(350, 400, 200, 20, Color.RED, 1));
+
+                // Disappearing wall at the end of disappearing platform (layer 1)
+                disappearingPlatforms.add(new Platform(550, 200, 20, 220, Color.RED, 1));
+
+                // Platform behind the wall (layer 0)
+                platforms.add(new Platform(750, 400, 200, 20, Color.BLACK, 0));
+
+                // Button to clear disappearing platforms (layer 0)
+                buttons.add(new Button(900, 360, 40, 40, Color.GREEN, this::clearDisappearingPlatforms, 0));
+
+                // Left side wall (layer 0)
+                disappearingPlatforms.add(new Platform(160, 200, 20, 220, Color.RED, 0));
+
+                // Level completion button behind left wall (layer 0)
+                buttons.add(new Button(110, 360, 40, 40, Color.CYAN, this::completeLevel, 0));
+                break;
         }
 
     }
 
-    private void completeLevel()
-    {
+    private void completeLevel() {
         levelComplete = true;
     }
 
-    private void addDisappearingPlatforms()
-    {
+    private void addDisappearingPlatforms() {
         disappearingPlatforms.add(new Platform(300, 400, 600, 20, Color.RED));
         disappearingPlatforms.add(new Platform(160, 170, 20, 230, Color.RED));
     }
 
-    private void clearDisappearingPlatforms()
-    {
+    private void clearDisappearingPlatforms() {
         disappearingPlatforms.clear();
     }
 
-    private void gameLoop()
-    {
+    private void gameLoop() {
         killPlayer();
         recordPosition();
         updatePlayerVelocity();
@@ -411,47 +381,38 @@ public class EchoMovementGame extends JPanel implements KeyListener
         repaint();
     }
 
-    private void killPlayer()
-    {
+    private void killPlayer() {
         if (playerY > 600) restart();
     }
 
-    private void updatePlayerVelocity()
-    {
+    private void updatePlayerVelocity() {
         // Apply gravity if in the air
-        if (!onGround)
-        {
+        if (!onGround) {
             velocityY += 1; // Gravity
         }
 
         // Apply jump force if jumping
-        if (jumping)
-        {
+        if (jumping) {
             velocityY = JUMP_FORCE; // Apply initial jump force
             onGround = false; // Player is no longer on the ground
             jumping = false; // Reset jumping flag after applying jump force
         }
 
         // Handle horizontal movement
-        if (aPressed && !dPressed)
-        {
+        if (aPressed && !dPressed) {
             velocityX = -10;
-        } else if (dPressed && !aPressed)
-        {
+        } else if (dPressed && !aPressed) {
             velocityX = 10;
-        } else
-        {
+        } else {
             velocityX = 0;
         }
     }
 
-    private void handleVerticalMovement(int currentX, int initialY, int targetY)
-    {
+    private void handleVerticalMovement(int currentX, int initialY, int targetY) {
         int steps = Math.abs(velocityY) + 1;
         boolean landed = false;
 
-        for (int i = 1; i <= steps; i++)
-        {
+        for (int i = 1; i <= steps; i++) {
             float progress = (float) i / steps;
             int testY = initialY + (int) ((targetY - initialY) * progress);
 
@@ -462,48 +423,40 @@ public class EchoMovementGame extends JPanel implements KeyListener
             collidables.addAll(echoes);
             collidables.addAll(mountains);
 
-            for (Collidable collidable : collidables)
-            {
+            for (Collidable collidable : collidables) {
                 // Only check top collision when falling
-                if (velocityY >= 0 && collidable.isCollidingWithTop(currentX, testY, PLAYER_WIDTH, PLAYER_HEIGHT, layer))
-                {
+                if (velocityY >= 0 && collidable.isCollidingWithTop(currentX, testY, PLAYER_WIDTH, PLAYER_HEIGHT, layer)) {
                     playerY = collidable.y - PLAYER_HEIGHT; // Snap the player to the top
                     velocityY = 0;
                     onGround = true;
                     landed = true;
                     canJump = true;
                     // If colliding with an echo, you might want to stick to it:
-                    if (collidable instanceof Echo)
-                    {
+                    if (collidable instanceof Echo) {
                         currentPlatform = (Echo) collidable;
                     }
                     break;
                 }
                 // Check for ceiling collisions when jumping upward
-                if (velocityY < 0 && collidable.isCollidingWithSide(currentX, testY, PLAYER_WIDTH, PLAYER_HEIGHT, layer))
-                {
+                if (velocityY < 0 && collidable.isCollidingWithSide(currentX, testY, PLAYER_WIDTH, PLAYER_HEIGHT, layer)) {
                     playerY = collidable.y + collidable.height;
                     velocityY = 0;
                     break;
                 }
             }
 
-            if (!landed)
-            {
+            if (!landed) {
                 playerY = testY;
                 onGround = false;
-            } else
-            {
+            } else {
                 break;
             }
         }
     }
 
-    private void handleHorizontalMovement(int initialX, int initialY, int targetX)
-    {
+    private void handleHorizontalMovement(int initialX, int initialY, int targetX) {
         int steps = Math.abs(velocityX) + 1;
-        for (int i = 1; i <= steps; i++)
-        {
+        for (int i = 1; i <= steps; i++) {
             float progress = (float) i / steps;
             int testX = initialX + (int) ((targetX - initialX) * progress);
 
@@ -515,44 +468,35 @@ public class EchoMovementGame extends JPanel implements KeyListener
             collidables.addAll(echoes);
             collidables.addAll(mountains);
 
-            for (Collidable collidable : collidables)
-            {
+            for (Collidable collidable : collidables) {
                 // Skip side collision if it's a top landing
-                if (collidable.isCollidingWithTop(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT, layer))
-                {
+                if (collidable.isCollidingWithTop(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT, layer)) {
                     continue;
                 }
-                if (collidable.isCollidingWithSide(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT, layer))
-                {
+                if (collidable.isCollidingWithSide(testX, initialY, PLAYER_WIDTH, PLAYER_HEIGHT, layer)) {
                     collision = true;
-                    if (velocityX > 0)
-                    {
+                    if (velocityX > 0) {
                         playerX = collidable.x - PLAYER_WIDTH;
-                    } else if (velocityX < 0)
-                    {
+                    } else if (velocityX < 0) {
                         playerX = collidable.x + collidable.width;
                     }
                     velocityX = 0;
                     break;
                 }
             }
-            if (!collision)
-            {
+            if (!collision) {
                 playerX = testX;
-            } else
-            {
+            } else {
                 break;
             }
         }
     }
 
-    private void handleMovement()
-    {
+    private void handleMovement() {
         int initialX = playerX;
         int initialY = playerY;
 
-        if (currentPlatform != null && currentPlatform.isActive() && !timeFrozen)
-        {
+        if (currentPlatform != null && currentPlatform.isActive() && !timeFrozen) {
             Point currentPos = currentPlatform.getCurrentPosition();
             Point lastPos = currentPlatform.getLastPosition();
             int deltaX = currentPos.x - lastPos.x;
@@ -572,28 +516,21 @@ public class EchoMovementGame extends JPanel implements KeyListener
         handleVerticalMovement(playerX, initialY, targetY);
     }
 
-    private void checkButtonCollisions(int currentX, int currentY)
-    {
-        for (Button button : buttons)
-        {
-            if (button.isCollidingWithSide(currentX, currentY, PLAYER_WIDTH, PLAYER_HEIGHT, layer))
-            {
+    private void checkButtonCollisions(int currentX, int currentY) {
+        for (Button button : buttons) {
+            if (button.isCollidingWithSide(currentX, currentY, PLAYER_WIDTH, PLAYER_HEIGHT, layer)) {
                 button.trigger();
             }
         }
     }
 
-    private void updateEchoes()
-    {
+    private void updateEchoes() {
         Iterator<Echo> iter = echoes.iterator();
-        while (iter.hasNext())
-        {
+        while (iter.hasNext()) {
             Echo echo = iter.next();
             echo.update();
-            if (echo.isDone())
-            {
-                if (echo == currentPlatform)
-                {
+            if (echo.isDone()) {
+                if (echo == currentPlatform) {
                     currentPlatform = null;
                 }
                 iter.remove();
@@ -601,28 +538,25 @@ public class EchoMovementGame extends JPanel implements KeyListener
         }
     }
 
-    private void recordPosition()
-    {
+    private void recordPosition() {
         movementHistory.offer(new Point(playerX, playerY));
-        if (movementHistory.size() > MOVEMENT_HISTORY_LENGTH)
-        {
+        if (movementHistory.size() > MOVEMENT_HISTORY_LENGTH) {
             movementHistory.poll();
         }
     }
 
-    private void restart()
-    {
+    private void restart() {
         playerX = 100;
         playerY = 100;
         velocityY = 0;
         currentPlatform = null;
         levelComplete = false;
+        timeFrozen = false;
         initializeLevel(level);
     }
 
     @Override
-    protected void paintComponent(Graphics g)
-    {
+    protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, getWidth(), getHeight());
@@ -645,13 +579,12 @@ public class EchoMovementGame extends JPanel implements KeyListener
         g.drawString("y velocity: " + velocityY, 20, 80);
         g.drawString("player x: " + playerX, 20, 100);
         g.drawString("player y: " + playerY, 20, 120);
-        g.drawString("layer: "+ layer, 20, 140);
+        g.drawString("layer: " + layer, 20, 140);
         g.drawString("level: " + level, 20, 160);
 
         drawControlsOverlay(g); // Call the new method to draw controls
 
-        if (levelComplete)
-        {
+        if (levelComplete) {
             g.setFont(new Font("Arial", Font.BOLD, 30));
             g.setColor(Color.GREEN);
             g.drawString("Level Complete! Press R to restart", getWidth() / 2 - 100, getHeight() / 2);
@@ -683,13 +616,10 @@ public class EchoMovementGame extends JPanel implements KeyListener
     }
 
     @Override
-    public void keyPressed(KeyEvent e)
-    {
-        switch (e.getKeyCode())
-        {
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
             case KeyEvent.VK_SPACE:
-                if (onGround && canJump)
-                {
+                if (onGround && canJump) {
                     velocityY = JUMP_FORCE; // Apply jump force
                     jumping = true;
                     canJump = false; // Prevent double jumping
@@ -712,13 +642,13 @@ public class EchoMovementGame extends JPanel implements KeyListener
                 restart();
                 break;
             case KeyEvent.VK_UP:
-                if (level == 2) layer = layer == 0 ? 1 : 0; //the reason I have this duplicate bit is so I can easily add more layers (for example 0, 1, 2 -> rolls back over to 0). Also nice not at all confusing ternary, will be replaced with a simple if statement if more layers are added
+                if (layerChangingEnabled())
+                    layer = layer == 0 ? 1 : 0; //the reason I have this duplicate bit is so I can easily add more layers (for example 0, 1, 2 -> rolls back over to 0). Also nice not at all confusing ternary, will be replaced with a simple if statement if more layers are added
                 break;
             case KeyEvent.VK_DOWN:
-                if (level == 2) layer = layer == 0 ? 1 : 0;
+                if (layerChangingEnabled()) layer = layer == 0 ? 1 : 0;
                 break;
-            case KeyEvent.VK_T:
-            {
+            case KeyEvent.VK_T: {
                 timeFrozen = !timeFrozen;
                 break;
             }
@@ -730,23 +660,27 @@ public class EchoMovementGame extends JPanel implements KeyListener
                 level = 2;
                 restart();
                 break;
+            case KeyEvent.VK_3:
+                level = 3;
+                restart();
         }
     }
 
+    private boolean layerChangingEnabled() {
+        return level == 2 || level == 3;
+    }
+
     @Override
-    public void keyReleased(KeyEvent e)
-    {
+    public void keyReleased(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_D) dPressed = false;
         if (e.getKeyCode() == KeyEvent.VK_A) aPressed = false;
     }
 
     @Override
-    public void keyTyped(KeyEvent e)
-    {
+    public void keyTyped(KeyEvent e) {
     }
 
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
         new EchoMovementGame();
     }
 }
